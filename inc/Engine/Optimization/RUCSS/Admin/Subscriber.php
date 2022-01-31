@@ -45,6 +45,8 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 */
 	private $template_path;
 
+	private $render;
+
 	/**
 	 * Instantiate the class
 	 *
@@ -52,12 +54,12 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 * @param Database $database Database instance.
 	 * @param UsedCSS $used_css UsedCSS instance.
 	 */
-	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue ,$template_path ) {
+	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue , Render_Interface $render ) {
 		$this->settings      = $settings;
 		$this->database      = $database;
 		$this->used_css      = $used_css;
 		$this->queue         = $queue;
-		$this->template_path         = $template_path;
+		$this->render        = $render;
 	}
 
 	/**
@@ -475,23 +477,24 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 * @since 3.11
 	 */
 	public function add_admin_page() {
-		add_options_page(
+		add_menu_page(
 			'RUCSS Status',
 			apply_filters( 'rocket_rucss_status_title', 'RUCSS Status' ),
 			'rocket_remove_unused_css',
 			'rucss_status',
 			[ $this, 'render_rucss_status' ]
 		);
+		remove_menu_page( 'rucss_status' );
 	}
 
 	public function render_rucss_status() {
 		$rucss_list_table = new RucssStatusTable();
 		$rucss_list_table->prepare_items();
-		(new Render($this->template_path ))->generate(
+		echo $this->render->generate(
 			'rucss-status',
 			[
 				'slug'            => 'rucss_status',
-				'rucss_list_table'=>$rucss_list_table
+				'rucss_list_table'=> $rucss_list_table
 			]);
 	}
 }
