@@ -2163,4 +2163,13 @@ class Page {
 		$sub_fields = $this->settings->set_radio_buttons_sub_fields_value( $sub_fields );
 		$this->render->render_fields( $sub_fields );
 	}
+
+	public function render_rucss_status_page($data) {
+		echo $this->render->generate( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic content is properly escaped in the view.
+			'rucss-status',
+			[
+				'slug'            => 'rucss_status', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic content is properly escaped in the view.
+			]
+		);
+	}
 }

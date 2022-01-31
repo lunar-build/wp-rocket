@@ -1,13 +1,16 @@
 <?php
-declare(strict_types=1);
+declare( strict_types=1 );
 
 namespace WP_Rocket\Engine\Optimization\RUCSS\Admin;
 
+use WP_Rocket\Admin\Deactivation\Render;
 use WP_Rocket\Engine\Admin\Settings\Settings as AdminSettings;
 use WP_Rocket\Engine\Common\Queue\QueueInterface;
 use WP_Rocket\Engine\Optimization\RUCSS\Controller\UsedCSS;
 use WP_Rocket\Event_Management\Event_Manager;
 use WP_Rocket\Event_Management\Event_Manager_Aware_Subscriber_Interface;
+use WP_Rocket\Engine\Optimization\RUCSS\Admin\RucssStatusTable;
+use WP_Rocket\Interfaces\Render_Interface;
 
 class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	/**
@@ -33,19 +36,28 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 
 	private $queue;
 
+	/**
+	 * Path to the templates
+	 *
+	 * @since 3.11
+	 *
+	 * @var string
+	 */
+	private $template_path;
 
 	/**
 	 * Instantiate the class
 	 *
-	 * @param Settings $settings    Settings instance.
-	 * @param Database $database    Database instance.
-	 * @param UsedCSS  $used_css    UsedCSS instance.
+	 * @param Settings $settings Settings instance.
+	 * @param Database $database Database instance.
+	 * @param UsedCSS $used_css UsedCSS instance.
 	 */
-	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue ) {
-		$this->settings = $settings;
-		$this->database = $database;
-		$this->used_css = $used_css;
-		$this->queue    = $queue;
+	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue ,$template_path ) {
+		$this->settings      = $settings;
+		$this->database      = $database;
+		$this->used_css      = $used_css;
+		$this->queue         = $queue;
+		$this->template_path         = $template_path;
 	}
 
 	/**
@@ -53,7 +65,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @return array
 	 */
-	public static function get_subscribed_events() : array {
+	public static function get_subscribed_events(): array {
 		$slug = rocket_get_constant( 'WP_ROCKET_SLUG', 'wp_rocket_settings' );
 
 		return [
@@ -82,7 +94,8 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 				[ 'set_optimize_css_delivery_value', 10, 1 ],
 				[ 'set_optimize_css_delivery_method_value', 10, 1 ],
 			],
-			'admin_init' => 'add_rucss_column_status',
+			'admin_init'                          => 'add_rucss_column_status',
+			'admin_menu'                          => 'add_admin_page',
 		];
 	}
 
@@ -114,17 +127,23 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 
 		foreach ( $post_types as $post_type ) {
 			$this->event_manager->add_callback( "manage_{$post_type}_posts_columns", [ $this, 'add_status_column' ] );
-			$this->event_manager->add_callback( "manage_{$post_type}_posts_custom_column", [ $this, 'add_status_data' ], 10, 2 );
+			$this->event_manager->add_callback( "manage_{$post_type}_posts_custom_column", [
+				$this,
+				'add_status_data'
+			], 10, 2 );
 		}
 
 		foreach ( $taxonomies as $taxonomy ) {
 			$this->event_manager->add_callback( "manage_edit-{$taxonomy}_columns", [ $this, 'add_status_column' ] );
-			$this->event_manager->add_callback( "manage_{$taxonomy}_custom_column", [ $this, 'add_taxonomy_status_data' ], 10, 3 );
+			$this->event_manager->add_callback( "manage_{$taxonomy}_custom_column", [
+				$this,
+				'add_taxonomy_status_data'
+			], 10, 3 );
 		}
 	}
 
 	public function add_status_column( $columns ) {
-		return array_merge( $columns, [ 'usedcss_status' => 'RUCSS status'] );
+		return array_merge( $columns, [ 'usedcss_status' => 'RUCSS status' ] );
 	}
 
 	public function add_status_data( $column_key, $post_id ) {
@@ -211,6 +230,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 			}
 
 			$this->queue->cancel_pending_jobs_cron();
+
 			return;
 		}
 
@@ -296,7 +316,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @return array
 	 */
-	public function add_options_first_time( $options ) : array {
+	public function add_options_first_time( $options ): array {
 		return $this->settings->add_options( $options );
 	}
 
@@ -305,12 +325,12 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @since 3.9
 	 *
-	 * @param array         $input    Array of values submitted from the form.
+	 * @param array $input Array of values submitted from the form.
 	 * @param AdminSettings $settings Settings class instance.
 	 *
 	 * @return array
 	 */
-	public function sanitize_options( $input, AdminSettings $settings ) : array {
+	public function sanitize_options( $input, AdminSettings $settings ): array {
 		return $this->settings->sanitize_options( $input, $settings );
 	}
 
@@ -320,14 +340,14 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 * @since 3.9
 	 *
 	 * @param array $old_value An array of submitted values for the settings.
-	 * @param array $value     An array of previous values for the settings.
+	 * @param array $value An array of previous values for the settings.
 	 *
 	 * @return void
 	 */
 	public function clean_used_css_and_cache( $old_value, $value ) {
 		if ( ! current_user_can( 'rocket_manage_options' )
-			||
-			! $this->settings->is_enabled()
+		     ||
+		     ! $this->settings->is_enabled()
 		) {
 			return;
 		}
@@ -428,11 +448,11 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @since 3.10
 	 *
-	 * @param array $field_args    Array of field to be added to settigs page.
+	 * @param array $field_args Array of field to be added to settigs page.
 	 *
 	 * @return array
 	 */
-	public function set_optimize_css_delivery_value( $field_args ) : array {
+	public function set_optimize_css_delivery_value( $field_args ): array {
 		return $this->settings->set_optimize_css_delivery_value( $field_args );
 	}
 
@@ -441,11 +461,37 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @since 3.10
 	 *
-	 * @param array $field_args    Array of field to be added to settigs page.
+	 * @param array $field_args Array of field to be added to settigs page.
 	 *
 	 * @return array
 	 */
-	public function set_optimize_css_delivery_method_value( $field_args ) : array {
+	public function set_optimize_css_delivery_method_value( $field_args ): array {
 		return $this->settings->set_optimize_css_delivery_method_value( $field_args );
+	}
+
+	/**
+	 * Adds plugin page to the Settings menu.
+	 *
+	 * @since 3.11
+	 */
+	public function add_admin_page() {
+		add_options_page(
+			'RUCSS Status',
+			apply_filters( 'rocket_rucss_status_title', 'RUCSS Status' ),
+			'rocket_remove_unused_css',
+			'rucss_status',
+			[ $this, 'render_rucss_status' ]
+		);
+	}
+
+	public function render_rucss_status() {
+		$rucss_list_table = new RucssStatusTable();
+		$rucss_list_table->prepare_items();
+		(new Render($this->template_path ))->generate(
+			'rucss-status',
+			[
+				'slug'            => 'rucss_status',
+				'rucss_list_table'=>$rucss_list_table
+			]);
 	}
 }

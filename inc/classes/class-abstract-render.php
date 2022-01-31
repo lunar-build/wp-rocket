@@ -43,11 +43,9 @@ abstract class Abstract_Render implements Render_Interface {
 	 */
 	public function generate( $template, $data = [] ) {
 		$template_path = $this->get_template_path( $template );
-
 		if ( ! rocket_direct_filesystem()->is_readable( $template_path ) ) {
 			return;
 		}
-
 		ob_start();
 
 		include $template_path;
