@@ -74,6 +74,7 @@ class UsedCSS extends Query {
 				'status' => 'pending',
 				'fields' => [
 					'id',
+					'url',
 				],
 				'job_id__not_in' => [
 					'not_in' => '',
