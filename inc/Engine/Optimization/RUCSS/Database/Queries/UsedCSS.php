@@ -70,23 +70,46 @@ class UsedCSS extends Query {
 	public function get_pending_jobs( int $count = 10 ) {
 		return $this->query(
 			[
-				'number' => $count,
-				'status' => 'pending',
-				'fields' => [
+				'number'         => $count,
+				'status'         => 'pending',
+				'fields'         => [
 					'id',
 				],
 				'job_id__not_in' => [
 					'not_in' => '',
 				],
-				'orderby' => 'modified',
-				'order' => 'asc',
+				'orderby'        => 'modified',
+				'order'          => 'asc',
 			]
 		);
 	}
 
+	public function get_rucss_data( $search = false ) {
+		$query_arr = [
+			'fields'  => [
+				'id',
+				'url',
+				'is_mobile',
+				'status',
+				'modified',
+			],
+			'orderby' => 'modified',
+			'order'   => 'asc',
+		];
+		if ( $search ) {
+			$query_arr['search_columns'] = [ 'url' ];
+			$query_arr['search']         = $search;
+		}
+
+		return $this->query( $query_arr );
+	}
+
 	public function increment_retries( $id, $retries ) {
-		return $this->update_item( $id, [
-			'retries' => $retries + 1
-		] );
+		return $this->update_item(
+			 $id,
+			[
+				'retries' => $retries + 1,
+			 ]
+			);
 	}
 }

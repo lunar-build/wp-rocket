@@ -178,7 +178,7 @@ class UsedCSS {
 					]
 				);
 
-				//Increment retries.
+				// Increment retries.
 				$retries = 0;
 				if ( isset( $used_css->retries ) ) {
 					$retries = $used_css->retries;
@@ -199,7 +199,7 @@ class UsedCSS {
 				return $html;
 			}
 
-			//We got jobid and queue name so save them into the DB and change status to be pending
+			// We got jobid and queue name so save them into the DB and change status to be pending
 			$data = [
 				'url'        => $url,
 				'retries'    => 0,
@@ -717,12 +717,12 @@ class UsedCSS {
 
 			// Increment the retries number with 1.
 			$this->used_css_query->increment_retries( $id, $row_details->retries );
-			//@Todo: Maybe we can add this row to the async job to get the status before the next cron
+			// @Todo: Maybe we can add this row to the async job to get the status before the next cron
 
 			return;
 		}
 
-		//Everything is fine, save the usedcss into DB, change status to completed and reset queue_name and job_id.
+		// Everything is fine, save the usedcss into DB, change status to completed and reset queue_name and job_id.
 		$params = [
 			'css'        => $job_details['contents']['shakedCSS'],
 			'status'     => 'completed',
@@ -731,7 +731,7 @@ class UsedCSS {
 		];
 		$this->used_css_query->update_item( $id, $params );
 
-		//Flush cache for this url.
+		// Flush cache for this url.
 		$this->purge->purge_url( $row_details->url );
 
 		do_action( 'rucss_complete_job_status', $row_details->url, $job_details );

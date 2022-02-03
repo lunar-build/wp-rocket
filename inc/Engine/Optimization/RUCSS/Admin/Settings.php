@@ -158,4 +158,44 @@ class Settings {
 		$field_args['value'] = $value;
 		return $field_args;
 	}
+
+	/**
+	 * Add Clean used RUCSS Status to WP Rocket admin bar item
+	 *
+	 * @since 3.9
+	 *
+	 * @param WP_Admin_Bar $wp_admin_bar WP_Admin_Bar instance, passed by reference.
+	 *
+	 * @return void
+	 */
+	public function add_rucss_status_page_menu_item( $wp_admin_bar ) {
+		if ( ! current_user_can( 'rocket_remove_unused_css' ) ) {
+			return;
+		}
+
+		if ( ! is_admin() ) {
+			return;
+		}
+
+		if ( ! $this->is_enabled() ) {
+			return;
+		}
+
+		$referer = '';
+		$page    = 'rucss_status';
+
+		if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
+			$referer_url = filter_var( wp_unslash( $_SERVER['REQUEST_URI'] ), FILTER_SANITIZE_URL );
+			$referer     = '&_wp_http_referer=' . rawurlencode( remove_query_arg( 'fl_builder', $referer_url ) );
+		}
+
+		$wp_admin_bar->add_menu(
+			[
+				'parent' => 'wp-rocket',
+				'id'     => 'rucss-status-page',
+				'title'  => __( 'RUCSS Status', 'rocket' ),
+				'href'   => wp_nonce_url( admin_url( "admin.php?page={$page}{$referer}" ), $page ),
+			]
+		);
+	}
 }

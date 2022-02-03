@@ -1,91 +1,23 @@
 <?php
-declare( strict_types=1 );
+namespace WP_Rocket\Engine\Admin\Status;
 
-namespace WP_Rocket\Engine\Optimization\RUCSS\Admin;
-
-// WP_List_Table is not loaded automatically so we need to load it in our application
+use WP_Rocket\Engine\Optimization\RUCSS\Database\Queries\UsedCSS;
+// WP_List_Table is not loaded automatically so we need to load it in our application.
 if ( ! class_exists( 'WP_List_Table' ) ) {
-	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
+	require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
-class RucssStatusTable extends \WP_List_Table {
-	/**
-	 * ***********************************************************************
-	 * Normally we would be querying data from a database and manipulating that
-	 * for use in your list table. For this example, we're going to simplify it
-	 * slightly and create a pre-built array. Think of this as the data that might
-	 * be returned by $wpdb->query()
-	 *
-	 * In a real-world scenario, you would run your own custom query inside
-	 * the prepare_items() method in this class.
-	 *
-	 * @var array
-	 * ************************************************************************
-	 */
-	protected $example_data = array(
-		array(
-			'ID'       => 1,
-			'title'    => '300',
-			'rating'   => 'R',
-			'director' => 'Zach Snyder',
-		),
-		array(
-			'ID'       => 2,
-			'title'    => 'Eyes Wide Shut',
-			'rating'   => 'R',
-			'director' => 'Stanley Kubrick',
-		),
-		array(
-			'ID'       => 3,
-			'title'    => 'Moulin Rouge!',
-			'rating'   => 'PG-13',
-			'director' => 'Baz Luhrman',
-		),
-		array(
-			'ID'       => 4,
-			'title'    => 'Snow White',
-			'rating'   => 'G',
-			'director' => 'Walt Disney',
-		),
-		array(
-			'ID'       => 5,
-			'title'    => 'Super 8',
-			'rating'   => 'PG-13',
-			'director' => 'JJ Abrams',
-		),
-		array(
-			'ID'       => 6,
-			'title'    => 'The Fountain',
-			'rating'   => 'PG-13',
-			'director' => 'Darren Aronofsky',
-		),
-		array(
-			'ID'       => 7,
-			'title'    => 'Watchmen',
-			'rating'   => 'R',
-			'director' => 'Zach Snyder',
-		),
-		array(
-			'ID'       => 8,
-			'title'    => '2001',
-			'rating'   => 'G',
-			'director' => 'Stanley Kubrick',
-		),
-	);
+class RucssStatusWPListTable extends \WP_List_Table implements WPListTable_Interface {
 
-	/**
-	 * TT_Example_List_Table constructor.
-	 *
-	 * REQUIRED. Set up a constructor that references the parent constructor. We
-	 * use the parent reference to set some default configs.
-	 */
 	public function __construct() {
 		// Set parent defaults.
-		parent::__construct( array(
-			'singular' => 'movie',     // Singular name of the listed records.
-			'plural'   => 'movies',    // Plural name of the listed records.
-			'ajax'     => false,       // Does this table support ajax?
-		) );
+		parent::__construct(
+			 [
+				 'singular' => 'movie',     // Singular name of the listed records.
+				 'plural'   => 'movies',    // Plural name of the listed records.
+				 'ajax'     => false,       // Does this table support ajax?
+			 ]
+			);
 	}
 
 	/**
@@ -105,12 +37,15 @@ class RucssStatusTable extends \WP_List_Table {
 	 * @return array An associative array containing column information.
 	 */
 	public function get_columns() {
-		$columns = array(
-			'cb'       => '<input type="checkbox" />', // Render a checkbox instead of text.
-			'title'    => _x( 'Title', 'Column label', 'wp-list-table-example' ),
-			'rating'   => _x( 'Rating', 'Column label', 'wp-list-table-example' ),
-			'director' => _x( 'Director', 'Column label', 'wp-list-table-example' ),
-		);
+		$columns = [
+			// 'cb'       => '<input type="checkbox" />', // Render a checkbox instead of text.
+			'id'        => _x( 'id', 'Column label', 'rocket' ),
+			'url'       => _x( 'URL', 'Column label', 'rocket' ),
+			'is_mobile' => _x( 'Mobile', 'Column label', 'rocket' ),
+			'status'    => _x( 'Status', 'Column label', 'rocket' ),
+			'modified'  => _x( 'Modified', 'Column label', 'rocket' ),
+			// 'last_accessed' => _x( 'Last Accessed', 'Column label', 'rocket' ),
+		];
 
 		return $columns;
 	}
@@ -137,11 +72,11 @@ class RucssStatusTable extends \WP_List_Table {
 	 * @return array An associative array containing all the columns that should be sortable.
 	 */
 	protected function get_sortable_columns() {
-		$sortable_columns = array(
-			'title'    => array( 'title', false ),
-			'rating'   => array( 'rating', false ),
-			'director' => array( 'director', false ),
-		);
+		$sortable_columns = [
+			'status'    => [ 'status', false ],
+			'modified'  => [ 'modified', false ],
+			'is_mobile' => [ 'is_mobile', false ],
+		];
 
 		return $sortable_columns;
 	}
@@ -171,13 +106,7 @@ class RucssStatusTable extends \WP_List_Table {
 	 * @return string Text or HTML to be placed inside the column <td>.
 	 */
 	protected function column_default( $item, $column_name ) {
-		switch ( $column_name ) {
-			case 'rating':
-			case 'director':
-				return $item[ $column_name ];
-			default:
-				return print_r( $item, true ); // Show the whole array for troubleshooting purposes.
-		}
+		return $item->$column_name;
 	}
 
 	/**
@@ -191,13 +120,14 @@ class RucssStatusTable extends \WP_List_Table {
 	 *
 	 * @return string Text to be placed inside the column <td>.
 	 */
+	/*
 	protected function column_cb( $item ) {
 		return sprintf(
 			'<input type="checkbox" name="%1$s[]" value="%2$s" />',
 			$this->_args['singular'],  // Let's simply repurpose the table's singular label ("movie").
-			$item['ID']                // The value of the checkbox should be the record's ID.
+			$item->id                // The value of the checkbox should be the record's ID.
 		);
-	}
+	}*/
 
 	/**
 	 * Get title column value.
@@ -217,6 +147,7 @@ class RucssStatusTable extends \WP_List_Table {
 	 *
 	 * @return string Text to be placed inside the column <td>.
 	 */
+	/*
 	protected function column_title( $item ) {
 		$page = wp_unslash( $_REQUEST['page'] ); // WPCS: Input var ok.
 
@@ -252,7 +183,7 @@ class RucssStatusTable extends \WP_List_Table {
 			$item['ID'],
 			$this->row_actions( $actions )
 		);
-	}
+	}*/
 
 	/**
 	 * Get an associative array ( option_name => option_title ) with the list
@@ -271,13 +202,14 @@ class RucssStatusTable extends \WP_List_Table {
 	 *
 	 * @return array An associative array containing all the bulk actions.
 	 */
+	/*
 	protected function get_bulk_actions() {
 		$actions = array(
 			'delete' => _x( 'Delete', 'List table bulk action', 'wp-list-table-example' ),
 		);
 
 		return $actions;
-	}
+	}*/
 
 	/**
 	 * Handle bulk actions.
@@ -288,64 +220,13 @@ class RucssStatusTable extends \WP_List_Table {
 	 *
 	 * @see $this->prepare_items()
 	 */
+	/*
 	protected function process_bulk_action() {
 		// Detect when a bulk action is being triggered.
 		if ( 'delete' === $this->current_action() ) {
 			wp_die( 'Items deleted (or they would be if we had items to delete)!' );
 		}
-	}
-
-	protected function display_search() {
-		?>
-		<p class="search-box">
-			<form action="" method="GET">
-				<?php $this->search_box( __( 'Search' ), 'search-box-id' ); ?>
-				<input type="hidden" name="page" value="<?= esc_attr( $_REQUEST['page'] ) ?>"/>
-			</form>
-		</p>
-		<?php
-	}
-
-	/**
-	 * Displays the table.
-	 *
-	 * @since 3.1.0
-	 */
-	public function display() {
-		$singular = $this->_args['singular'];
-
-		$this->display_search();
-		$this->display_tablenav( 'top' );
-
-		$this->screen->render_screen_reader_content( 'heading_list' );
-		?>
-		<table class="wp-list-table <?php echo implode( ' ', $this->get_table_classes() ); ?>">
-			<thead>
-			<tr>
-				<?php $this->print_column_headers(); ?>
-			</tr>
-			</thead>
-
-			<tbody id="the-list"
-				<?php
-				if ( $singular ) {
-					echo " data-wp-lists='list:$singular'";
-				}
-				?>
-			>
-			<?php $this->display_rows_or_placeholder(); ?>
-			</tbody>
-
-			<tfoot>
-			<tr>
-				<?php $this->print_column_headers( false ); ?>
-			</tr>
-			</tfoot>
-
-		</table>
-		<?php
-		$this->display_tablenav( 'bottom' );
-	}
+	}*/
 
 	/**
 	 * Prepares the list of items for displaying.
@@ -365,12 +246,11 @@ class RucssStatusTable extends \WP_List_Table {
 	 * @uses $this->set_pagination_args()
 	 */
 	function prepare_items() {
-		global $wpdb; //This is used only if making any database queries
-
+		global $wpdb; // This is used only if making any database queries
 		/*
 		 * First, lets decide how many records per page to show
 		 */
-		$per_page = 5;
+		$per_page = 10;
 
 		/*
 		 * REQUIRED. Now we need to define our column headers. This includes a complete
@@ -380,7 +260,7 @@ class RucssStatusTable extends \WP_List_Table {
 		 * used to build the value for our _column_headers property.
 		 */
 		$columns  = $this->get_columns();
-		$hidden   = array();
+		$hidden   = [];
 		$sortable = $this->get_sortable_columns();
 
 		/*
@@ -389,7 +269,7 @@ class RucssStatusTable extends \WP_List_Table {
 		 * three other arrays. One for all columns, one for hidden columns, and one
 		 * for sortable columns.
 		 */
-		$this->_column_headers = array( $columns, $hidden, $sortable );
+		$this->_column_headers = [ $columns, $hidden, $sortable ];
 
 		/**
 		 * Optional. You can handle your bulk actions however you see fit. In this
@@ -414,7 +294,10 @@ class RucssStatusTable extends \WP_List_Table {
 		 * For information on making queries in WordPress, see this Codex entry:
 		 * http://codex.wordpress.org/Class_Reference/wpdb
 		 */
-		$data = $this->example_data;
+		// $data = $this->example_data;
+		$used_css_query = new UsedCSS();
+		$search         = ( isset( $_REQUEST['s'] ) ) ? $_REQUEST['s'] : false;
+		$data           = $used_css_query->get_rucss_data( $search );
 
 		/*
 		 * This checks for sorting input and sorts the data in our array of dummy
@@ -427,7 +310,7 @@ class RucssStatusTable extends \WP_List_Table {
 		 * sorting technique would be unnecessary. In other words: remove this when
 		 * you implement your own query.
 		 */
-		usort( $data, array( $this, 'usort_reorder' ) );
+		usort( $data, [ $this, 'usort_reorder' ] );
 
 		/*
 		 * REQUIRED for pagination. Let's figure out what page the user is currently
@@ -460,11 +343,13 @@ class RucssStatusTable extends \WP_List_Table {
 		/**
 		 * REQUIRED. We also have to register our pagination options & calculations.
 		 */
-		$this->set_pagination_args( array(
-			'total_items' => $total_items,                     // WE have to calculate the total number of items.
-			'per_page'    => $per_page,                        // WE have to determine how many items to show on a page.
-			'total_pages' => ceil( $total_items / $per_page ), // WE have to calculate the total number of pages.
-		) );
+		$this->set_pagination_args(
+			 [
+				 'total_items' => $total_items,                     // WE have to calculate the total number of items.
+				 'per_page'    => $per_page,                        // WE have to determine how many items to show on a page.
+				 'total_pages' => ceil( $total_items / $per_page ), // WE have to calculate the total number of pages.
+			 ]
+			);
 	}
 
 	/**
@@ -477,13 +362,13 @@ class RucssStatusTable extends \WP_List_Table {
 	 */
 	protected function usort_reorder( $a, $b ) {
 		// If no sort, default to title.
-		$orderby = ! empty( $_REQUEST['orderby'] ) ? wp_unslash( $_REQUEST['orderby'] ) : 'title'; // WPCS: Input var ok.
+		$orderby = ! empty( $_REQUEST['orderby'] ) ? wp_unslash( $_REQUEST['orderby'] ) : 'modified'; // WPCS: Input var ok.
 
 		// If no order, default to asc.
-		$order = ! empty( $_REQUEST['order'] ) ? wp_unslash( $_REQUEST['order'] ) : 'asc'; // WPCS: Input var ok.
+		$order = ! empty( $_REQUEST['order'] ) ? wp_unslash( $_REQUEST['order'] ) : 'desc'; // WPCS: Input var ok.
 
 		// Determine sort order.
-		$result = strcmp( $a[ $orderby ], $b[ $orderby ] );
+		$result = strcmp( $a->$orderby, $b->$orderby );
 
 		return ( 'asc' === $order ) ? $result : - $result;
 	}

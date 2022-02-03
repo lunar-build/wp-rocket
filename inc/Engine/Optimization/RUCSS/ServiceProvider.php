@@ -61,12 +61,16 @@ class ServiceProvider extends AbstractServiceProvider {
 			->addArgument( $this->getContainer()->get( 'rucss_frontend_api_client' ) )
 			->addArgument( $this->getContainer()->get( 'rucss_queue' ) );
 
+		$this->getContainer()->add( 'rucss_wp_list_table', 'WP_Rocket\Engine\Admin\Status\RucssStatusWPListTable' );
+		$this->getContainer()->add( 'rucss_status_render', 'WP_Rocket\Engine\Admin\Status\Render' )
+			 ->addArgument( $this->getContainer()->get( 'template_path' ) . '/status' );
+
 		$this->getContainer()->share( 'rucss_admin_subscriber', 'WP_Rocket\Engine\Optimization\RUCSS\Admin\Subscriber' )
 			->addArgument( $this->getContainer()->get( 'rucss_settings' ) )
 			->addArgument( $this->getContainer()->get( 'rucss_database' ) )
 			->addArgument( $this->getContainer()->get( 'rucss_used_css_controller' ) )
 			->addArgument( $this->getContainer()->get( 'rucss_queue' ) )
-			->addArgument( $this->getContainer()->get( 'settings_render' ) );
+			->addArgument( $this->getContainer()->get( 'rucss_status_render' ) );
 		$this->getContainer()->share( 'rucss_frontend_subscriber', 'WP_Rocket\Engine\Optimization\RUCSS\Frontend\Subscriber' )
 			->addArgument( $this->getContainer()->get( 'rucss_used_css_controller' ) );
 	}

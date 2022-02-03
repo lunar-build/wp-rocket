@@ -3,13 +3,13 @@ declare( strict_types=1 );
 
 namespace WP_Rocket\Engine\Optimization\RUCSS\Admin;
 
-use WP_Rocket\Admin\Deactivation\Render;
+use WP_Rocket\Engine\Admin\Status\Render;
 use WP_Rocket\Engine\Admin\Settings\Settings as AdminSettings;
+use WP_Rocket\Engine\Admin\Status\RucssStatusWPListTable;
 use WP_Rocket\Engine\Common\Queue\QueueInterface;
 use WP_Rocket\Engine\Optimization\RUCSS\Controller\UsedCSS;
 use WP_Rocket\Event_Management\Event_Manager;
 use WP_Rocket\Event_Management\Event_Manager_Aware_Subscriber_Interface;
-use WP_Rocket\Engine\Optimization\RUCSS\Admin\RucssStatusTable;
 use WP_Rocket\Interfaces\Render_Interface;
 
 class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
@@ -34,17 +34,18 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 */
 	private $used_css;
 
+	/**
+	 * QueueInterface instance
+	 *
+	 * @var QueueInterface
+	 */
 	private $queue;
 
 	/**
-	 * Path to the templates
+	 * Render_Interface instance
 	 *
-	 * @since 3.11
-	 *
-	 * @var string
+	 * @var Render_Interface
 	 */
-	private $template_path;
-
 	private $render;
 
 	/**
@@ -52,14 +53,14 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @param Settings $settings Settings instance.
 	 * @param Database $database Database instance.
-	 * @param UsedCSS $used_css UsedCSS instance.
+	 * @param UsedCSS  $used_css UsedCSS instance.
 	 */
-	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue , Render_Interface $render ) {
-		$this->settings      = $settings;
-		$this->database      = $database;
-		$this->used_css      = $used_css;
-		$this->queue         = $queue;
-		$this->render        = $render;
+	public function __construct( Settings $settings, Database $database, UsedCSS $used_css, QueueInterface $queue, Render $render ) {
+		$this->settings = $settings;
+		$this->database = $database;
+		$this->used_css = $used_css;
+		$this->queue    = $queue;
+		$this->render   = $render;
 	}
 
 	/**
@@ -85,19 +86,22 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 			'edit_term'                           => 'delete_term_used_css',
 			'pre_delete_term'                     => 'delete_term_used_css',
 			'init'                                => [
-				[ 'schedule_clean_not_commonly_used_rows', ],
-				[ 'schedule_rucss_pending_jobs_cron', ],
+				[ 'schedule_clean_not_commonly_used_rows' ],
+				[ 'schedule_rucss_pending_jobs_cron' ],
 			],
 			'rocket_rucss_clean_rows_time_event'  => 'cron_clean_rows',
 			'admin_post_rocket_clear_usedcss'     => 'truncate_used_css_handler',
 			'admin_notices'                       => 'clear_usedcss_result',
-			'rocket_admin_bar_items'              => 'add_clean_used_css_menu_item',
+			'rocket_admin_bar_items'              => [
+				[ 'add_clean_used_css_menu_item' ],
+				[ 'add_rucss_status_page_menu_item' ],
+			],
 			'rocket_before_add_field_to_settings' => [
 				[ 'set_optimize_css_delivery_value', 10, 1 ],
 				[ 'set_optimize_css_delivery_method_value', 10, 1 ],
 			],
 			'admin_init'                          => 'add_rucss_column_status',
-			'admin_menu'                          => 'add_admin_page',
+			'admin_menu'                          => 'add_rucss_status_page',
 		];
 	}
 
@@ -129,18 +133,28 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 
 		foreach ( $post_types as $post_type ) {
 			$this->event_manager->add_callback( "manage_{$post_type}_posts_columns", [ $this, 'add_status_column' ] );
-			$this->event_manager->add_callback( "manage_{$post_type}_posts_custom_column", [
-				$this,
-				'add_status_data'
-			], 10, 2 );
+			$this->event_manager->add_callback(
+				 "manage_{$post_type}_posts_custom_column",
+				[
+					$this,
+					'add_status_data',
+				 ],
+				 10,
+				 2
+				);
 		}
 
 		foreach ( $taxonomies as $taxonomy ) {
 			$this->event_manager->add_callback( "manage_edit-{$taxonomy}_columns", [ $this, 'add_status_column' ] );
-			$this->event_manager->add_callback( "manage_{$taxonomy}_custom_column", [
-				$this,
-				'add_taxonomy_status_data'
-			], 10, 3 );
+			$this->event_manager->add_callback(
+				 "manage_{$taxonomy}_custom_column",
+				[
+					$this,
+					'add_taxonomy_status_data',
+				 ],
+				 10,
+				 3
+				);
 		}
 	}
 
@@ -327,7 +341,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @since 3.9
 	 *
-	 * @param array $input Array of values submitted from the form.
+	 * @param array         $input Array of values submitted from the form.
 	 * @param AdminSettings $settings Settings class instance.
 	 *
 	 * @return array
@@ -348,8 +362,8 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 */
 	public function clean_used_css_and_cache( $old_value, $value ) {
 		if ( ! current_user_can( 'rocket_manage_options' )
-		     ||
-		     ! $this->settings->is_enabled()
+			 ||
+			 ! $this->settings->is_enabled()
 		) {
 			return;
 		}
@@ -446,6 +460,19 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	}
 
 	/**
+	 * Add Clean used CSS link to WP Rocket admin bar item
+	 *
+	 * @since 3.11
+	 *
+	 * @param WP_Admin_Bar $wp_admin_bar WP_Admin_Bar instance, passed by reference.
+	 *
+	 * @return void
+	 */
+	public function add_rucss_status_page_menu_item( $wp_admin_bar ) {
+		$this->settings->add_rucss_status_page_menu_item( $wp_admin_bar );
+	}
+
+	/**
 	 * Set optimize css delivery value
 	 *
 	 * @since 3.10
@@ -476,7 +503,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	 *
 	 * @since 3.11
 	 */
-	public function add_admin_page() {
+	public function add_rucss_status_page() {
 		add_menu_page(
 			'RUCSS Status',
 			apply_filters( 'rocket_rucss_status_title', 'RUCSS Status' ),
@@ -488,13 +515,7 @@ class Subscriber implements Event_Manager_Aware_Subscriber_Interface {
 	}
 
 	public function render_rucss_status() {
-		$rucss_list_table = new RucssStatusTable();
-		$rucss_list_table->prepare_items();
-		echo $this->render->generate(
-			'rucss-status',
-			[
-				'slug'            => 'rucss_status',
-				'rucss_list_table'=> $rucss_list_table
-			]);
+		$rucss_list_table = new RucssStatusWPListTable();
+		echo $this->render->render_status_table( 'rucss-status', $rucss_list_table );
 	}
 }

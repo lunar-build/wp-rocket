@@ -2164,11 +2164,11 @@ class Page {
 		$this->render->render_fields( $sub_fields );
 	}
 
-	public function render_rucss_status_page($data) {
+	public function render_rucss_status_page( $data ) {
 		echo $this->render->generate( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic content is properly escaped in the view.
 			'rucss-status',
 			[
-				'slug'            => 'rucss_status', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic content is properly escaped in the view.
+				'slug' => 'rucss_status', // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Dynamic content is properly escaped in the view.
 			]
 		);
 	}
