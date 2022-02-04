@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace WP_Rocket\Engine\Optimization\RUCSS\Controller;
 
+use WP_Rocket\Engine\Cache\Purge;
 use WP_Rocket\Engine\Optimization\RUCSS\Database\Queries\UsedCSS as UsedCSS_Query;
 use WP_Rocket\Engine\Optimization\RUCSS\Frontend\APIClient;
 use WP_Rocket\Logger\Logger;
@@ -24,11 +25,19 @@ class CheckStatusProcess extends WP_Rocket_WP_Background_Process {
 	 */
 	private $api;
 
-	public function __construct( UsedCSS_Query $used_css_query, APIClient $api ) {
+	/**
+	 * Purge instance
+	 *
+	 * @var Purge
+	 */
+	private $purge;
+
+	public function __construct( UsedCSS_Query $used_css_query, APIClient $api, Purge $purge ) {
 		parent::__construct();
 
 		$this->used_css_query = $used_css_query;
-		$this->api = $api;
+		$this->api            = $api;
+		$this->purge          = $purge;
 	}
 
 	/**

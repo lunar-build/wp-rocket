@@ -55,7 +55,8 @@ class ServiceProvider extends AbstractServiceProvider {
 		$this->getContainer()->add( 'rucss_queue', 'WP_Rocket\Engine\Optimization\RUCSS\Controller\BGQueue' );
 		$this->getContainer()->add( 'rucss_check_status_process', 'WP_Rocket\Engine\Optimization\RUCSS\Controller\CheckStatusProcess' )
 			->addArgument( $this->getContainer()->get( 'rucss_used_css_query' ) )
-			->addArgument( $this->getContainer()->get( 'rucss_frontend_api_client' ) );
+			->addArgument( $this->getContainer()->get( 'rucss_frontend_api_client' ) )
+			->addArgument( $this->getContainer()->get( 'purge' ) );
 
 		$this->getContainer()->add( 'rucss_used_css_controller', 'WP_Rocket\Engine\Optimization\RUCSS\Controller\UsedCSS' )
 			->addArgument( $this->getContainer()->get( 'options' ) )
